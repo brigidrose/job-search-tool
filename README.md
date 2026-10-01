@@ -1,36 +1,36 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Job Search Tracker
 
-## Getting Started
+Track job opportunities, outreach status, and personalized outreach templates.
 
-First, run the development server:
+Stack: Next.js 16 (App Router, TypeScript), Tailwind CSS v4, shadcn/ui (Base UI), React Query, Prisma 7 + SQLite.
+
+## Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install          # also runs `prisma generate`
+npm run db:setup     # creates dev.db, applies migrations, seeds starter templates
+npm run dev          # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`.env` holds `DATABASE_URL="file:./dev.db"`. The database file is git-ignored.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Features
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Opportunities** (`/`): add opportunities, change status inline, see totals, leads by status, and outreach-sent %, and export everything as CSV.
+- **Templates** (`/templates`): browse starter outreach templates and preview them with `[Company]`, `[Contact Name]`, `[Role]`, and `[Specific Detail]` filled in, either typed or pulled from an opportunity, then copy the result.
 
-## Learn More
+Moving an opportunity to **Applied** stamps `dateApplied` the first time.
+"Outreach sent %" counts leads in Outreach sent, Response received, Interview, Offer, or No response.
 
-To learn more about Next.js, take a look at the following resources:
+## API
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Method | Route | Purpose |
+| --- | --- | --- |
+| GET / POST | `/api/opportunities` | List / create |
+| PATCH | `/api/opportunities/[id]` | Update status |
+| GET | `/api/opportunities/export` | CSV download |
+| GET | `/api/templates` | List templates |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Schema changes
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Edit `prisma/schema.prisma`, then run `npx prisma migrate dev --name <change>` followed by `npx prisma generate` (Prisma 7 doesn't generate automatically on migrate).

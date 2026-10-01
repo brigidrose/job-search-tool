@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum OpportunityStatus {
+  found
+  applied
+  outreach_sent
+  response_received
+  interview
+  offer
+  rejected
+  no_response
+}
+
+model Opportunity {
+  id           String            @id @default(cuid())
+  companyName  String
+  roleTitle    String
+  jobUrl       String?
+  contactName  String?
+  contactEmail String?
+  source       String?
+  dateFound    DateTime          @default(now())
+  dateApplied  DateTime?
+  status       OpportunityStatus @default(found)
+  notes        String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+model Template {
+  id       String @id @default(cuid())
+  title    String
+  category String
+  body     String
+}
