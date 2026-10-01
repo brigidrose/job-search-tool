@@ -72,3 +72,36 @@ export type Template = {
   category: string;
   body: string;
 };
+
+export type Principal = { name: string; relationships: string[] };
+
+export type FormDLead = {
+  id: string;
+  cik: string;
+  accessionNumber: string;
+  companyName: string;
+  city: string | null;
+  state: string | null;
+  phone: string | null;
+  industry: string | null;
+  entityType: string | null;
+  totalOfferingAmount: number | null;
+  totalAmountSold: number | null;
+  dateOfFirstSale: string | null;
+  dateFiled: string;
+  principals: Principal[];
+  guessedDomain: string | null;
+  suggestedEmails: string[];
+  isSoutheast: boolean;
+  remoteFriendly: boolean;
+  opportunityId: string | null;
+  createdAt: string;
+};
+
+export type FormDScanResult = {
+  daysScanned: string[];
+  filingsSeen: number;
+  leadsAdded: number;
+  skipped: Record<string, number>;
+  errors: string[];
+};

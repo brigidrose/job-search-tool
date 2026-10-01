@@ -32,6 +32,7 @@ model Opportunity {
   notes        String?
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
+  formDLead    FormDLead?
 }
 
 model Template {
@@ -39,4 +40,40 @@ model Template {
   title    String
   category String
   body     String
+}
+
+// A company found in an SEC Form D filing. One row per company (CIK), so
+// repeat filings never create duplicate leads.
+model FormDLead {
+  id                  String       @id @default(cuid())
+  cik                 String       @unique
+  accessionNumber     String       @unique
+  companyName         String
+  city                String?
+  state               String?
+  phone               String?
+  industry            String?
+  entityType          String?
+  totalOfferingAmount Float?
+  totalAmountSold     Float?
+  dateOfFirstSale     DateTime?
+  dateFiled           DateTime
+  // [{ name, relationships: string[] }]
+  principals          Json
+  guessedDomain       String?
+  // Pattern guesses like careers@domain; never verified.
+  suggestedEmails     Json
+  isSoutheast         Boolean      @default(false)
+  remoteFriendly      Boolean      @default(false)
+  opportunityId       String?      @unique
+  opportunity         Opportunity? @relation(fields: [opportunityId], references: [id])
+  createdAt           DateTime     @default(now())
+}
+
+// One row per EDGAR daily index already processed, so scans are idempotent.
+model FormDScanDay {
+  date          String   @id // YYYYMMDD
+  filingsSeen   Int
+  leadsAdded    Int
+  scannedAt     DateTime @default(now())
 }
