@@ -185,7 +185,7 @@ export default function SettingsPage() {
   const { data: profile, isPending, error } = useSearchProfile();
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-6 *:min-w-0">
       <div className="grid gap-1">
         <h1 className="text-2xl font-semibold">Search Profile</h1>
         <p className="text-sm text-muted-foreground">

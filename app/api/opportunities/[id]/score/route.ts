@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
+import { getDb } from "@/lib/session";
 import { opportunityInclude, withFit } from "@/lib/opportunities";
 import { getSearchProfile } from "@/lib/search-profile-server";
 
@@ -10,6 +10,7 @@ export async function GET(
   _request: NextRequest,
   ctx: RouteContext<"/api/opportunities/[id]/score">,
 ) {
+  const { db: prisma } = await getDb();
   const { id } = await ctx.params;
   const opportunity = await prisma.opportunity.findUnique({
     where: { id },
@@ -18,5 +19,5 @@ export async function GET(
   if (!opportunity) {
     return Response.json({ error: "Opportunity not found" }, { status: 404 });
   }
-  return Response.json(withFit(opportunity, await getSearchProfile()).fit);
+  return Response.json(withFit(opportunity, await getSearchProfile(prisma)).fit);
 }

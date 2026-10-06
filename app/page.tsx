@@ -12,7 +12,7 @@ export default function HomePage() {
   const { data: opportunities, isPending, error } = useOpportunities();
 
   return (
-    <div className="grid gap-8">
+    <div className="grid gap-8 *:min-w-0">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">Opportunities</h1>
         <div className="flex gap-2">

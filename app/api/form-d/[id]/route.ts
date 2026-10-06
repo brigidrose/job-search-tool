@@ -1,8 +1,9 @@
 import type { NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
+import { getDb } from "@/lib/session";
 
 // Toggle the user-set remote-friendly flag (Form D doesn't say).
 export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/form-d/[id]">) {
+  const { db: prisma } = await getDb();
   const { id } = await ctx.params;
   const body = await request.json().catch(() => null);
   if (typeof body?.remoteFriendly !== "boolean") {

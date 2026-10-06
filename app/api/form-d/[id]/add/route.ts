@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
+import { getDb } from "@/lib/session";
 import { filingUrl } from "@/lib/formd/edgar";
 import type { Principal } from "@/lib/formd/edgar";
 
@@ -9,6 +9,7 @@ function money(n: number | null) {
 
 // Creates an Opportunity from a Form D lead (once per lead/company).
 export async function POST(_request: NextRequest, ctx: RouteContext<"/api/form-d/[id]/add">) {
+  const { db: prisma } = await getDb();
   const { id } = await ctx.params;
   const lead = await prisma.formDLead.findUnique({ where: { id } });
   if (!lead) return Response.json({ error: "Lead not found" }, { status: 404 });

@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { prisma } from "../lib/db";
+import { ownerDb as prisma } from "../lib/db";
 
 const templates = [
   {

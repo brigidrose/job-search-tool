@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
+import { getDb } from "@/lib/session";
 import { opportunityInclude, optionalString, withFit } from "@/lib/opportunities";
 import { getSearchProfile } from "@/lib/search-profile-server";
 import { isStatus } from "@/lib/types";
@@ -8,6 +8,7 @@ export async function GET(
   _request: NextRequest,
   ctx: RouteContext<"/api/opportunities/[id]">,
 ) {
+  const { db: prisma } = await getDb();
   const { id } = await ctx.params;
   const opportunity = await prisma.opportunity.findUnique({
     where: { id },
@@ -16,7 +17,7 @@ export async function GET(
   if (!opportunity) {
     return Response.json({ error: "Opportunity not found" }, { status: 404 });
   }
-  return Response.json(withFit(opportunity, await getSearchProfile()));
+  return Response.json(withFit(opportunity, await getSearchProfile(prisma)));
 }
 
 // Updates any of: status, location, newsQuery.
@@ -24,6 +25,7 @@ export async function PATCH(
   request: NextRequest,
   ctx: RouteContext<"/api/opportunities/[id]">,
 ) {
+  const { db: prisma } = await getDb();
   const { id } = await ctx.params;
   const body = await request.json().catch(() => null);
 
@@ -39,6 +41,9 @@ export async function PATCH(
   for (const field of ["location", "newsQuery"] as const) {
     if (body[field] !== undefined && body[field] !== null && typeof body[field] !== "string") {
       return Response.json({ error: `${field} must be text` }, { status: 400 });
+    }
+    if (typeof body[field] === "string" && body[field].length > 300) {
+      return Response.json({ error: `${field} is too long` }, { status: 400 });
     }
   }
 
@@ -59,5 +64,5 @@ export async function PATCH(
     },
     include: opportunityInclude,
   });
-  return Response.json(withFit(opportunity, await getSearchProfile()));
+  return Response.json(withFit(opportunity, await getSearchProfile(prisma)));
 }

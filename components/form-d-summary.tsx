@@ -18,7 +18,7 @@ export function FormDSummary() {
   const newCount = open.filter(isNewLead).length;
 
   return (
-    <section className="grid gap-3">
+    <section className="grid gap-3 *:min-w-0">
       <div className="flex items-baseline justify-between gap-4">
         <h2 className="text-lg font-semibold">
           Form D leads matching your profile{" "}

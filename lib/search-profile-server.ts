@@ -1,5 +1,5 @@
 import type { Prisma } from "@/app/generated/prisma/client";
-import { prisma } from "@/lib/db";
+import type { Db } from "@/lib/db";
 import {
   DEFAULT_PROFILE,
   REMOTE,
@@ -30,8 +30,8 @@ function toProfile(row: Row): SearchProfile {
 }
 
 /** Returns the saved profile, creating it with defaults on first use. */
-export async function getSearchProfile(): Promise<SearchProfile> {
-  const row = await prisma.searchProfile.upsert({
+export async function getSearchProfile(db: Db): Promise<SearchProfile> {
+  const row = await db.searchProfile.upsert({
     where: { userId: USER_ID },
     update: {},
     create: { userId: USER_ID, ...DEFAULT_PROFILE },
@@ -40,8 +40,8 @@ export async function getSearchProfile(): Promise<SearchProfile> {
 }
 
 /** Looks a profile up by id; "default" (or no id) means the user's profile. */
-export async function findSearchProfile(id: string | null) {
-  const profile = await getSearchProfile();
+export async function findSearchProfile(db: Db, id: string | null) {
+  const profile = await getSearchProfile(db);
   return !id || id === "default" || id === profile.id ? profile : null;
 }
 
@@ -102,8 +102,11 @@ export function parseProfileInput(body: unknown): SearchProfileInput {
   };
 }
 
-export async function saveSearchProfile(input: SearchProfileInput): Promise<SearchProfile> {
-  const row = await prisma.searchProfile.upsert({
+export async function saveSearchProfile(
+  db: Db,
+  input: SearchProfileInput,
+): Promise<SearchProfile> {
+  const row = await db.searchProfile.upsert({
     where: { userId: USER_ID },
     update: input,
     create: { userId: USER_ID, ...input },

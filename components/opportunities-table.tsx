@@ -86,7 +86,7 @@ export function OpportunitiesTable({ opportunities }: { opportunities: Opportuni
       : opportunities;
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-3 *:min-w-0">
       <div className="flex items-center justify-end gap-2">
         <span className="text-sm text-muted-foreground">Sort</span>
         <Select

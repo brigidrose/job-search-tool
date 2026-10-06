@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 enum OpportunityStatus {
@@ -86,7 +86,7 @@ model FormDScanDay {
 }
 
 // What "relevant" means for the user. One row per user (single-user for now).
-// List fields are JSON string arrays because SQLite has no array columns.
+// List fields are stored as JSON string arrays.
 model SearchProfile {
   id            String   @id @default(cuid())
   userId        String   @unique @default("default")
@@ -101,4 +101,18 @@ model SearchProfile {
   customDorks   Json
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+// Singleton row tracking when the visitor demo data was last rebuilt.
+model DemoState {
+  id          Int      @id @default(1)
+  lastResetAt DateTime
+}
+
+// Failed sign-in attempts, used to slow down password guessing.
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }

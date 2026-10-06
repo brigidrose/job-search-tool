@@ -1,5 +1,6 @@
 import type { Prisma } from "@/app/generated/prisma/client";
-import { prisma } from "@/lib/db";
+import { DEMO_MAX_RESEARCH_PER_HOUR } from "@/lib/demo";
+import { getDb } from "@/lib/session";
 import { filingUrl } from "@/lib/formd/edgar";
 import { opportunityInclude, optionalString, withFit } from "@/lib/opportunities";
 import { getSearchProfile } from "@/lib/search-profile-server";
@@ -9,6 +10,20 @@ import { researchCompany } from "@/lib/research";
 // ad-hoc lookup, or { opportunityId } to research an opportunity and cache the
 // result on it. Returns { funding, hiring_signals, recent_news, stage, ... }.
 export async function POST(request: Request) {
+  const { db: prisma, isDemo } = await getDb();
+
+  // Research makes this server call outside services, so cap it for visitors.
+  if (isDemo) {
+    const recent = await prisma.opportunity.count({
+      where: { researchFetchedAt: { gt: new Date(Date.now() - 3_600_000) } },
+    });
+    if (recent >= DEMO_MAX_RESEARCH_PER_HOUR) {
+      return Response.json(
+        { error: "The demo has reached its research limit for this hour. Try again later." },
+        { status: 429 },
+      );
+    }
+  }
   const body = await request.json().catch(() => null);
   const opportunityId = optionalString(body?.opportunityId);
 
@@ -57,6 +72,6 @@ export async function POST(request: Request) {
   });
   return Response.json({
     research,
-    opportunity: withFit(updated, await getSearchProfile()),
+    opportunity: withFit(updated, await getSearchProfile(prisma)),
   });
 }

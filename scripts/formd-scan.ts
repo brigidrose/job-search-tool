@@ -1,6 +1,6 @@
 // Usage: npm run formd:scan [-- --days 30]
 import "dotenv/config";
-import { prisma } from "../lib/db";
+import { ownerDb as prisma } from "../lib/db";
 import { scanFormD } from "../lib/formd/scan";
 
 const daysArg = process.argv.indexOf("--days");

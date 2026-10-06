@@ -145,7 +145,7 @@ export default function OpportunityPage({ params }: PageProps<"/opportunities/[i
   }
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-6 *:min-w-0">
       <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
         ← Opportunities
       </Link>

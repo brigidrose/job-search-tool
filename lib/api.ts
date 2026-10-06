@@ -199,3 +199,35 @@ export function useAddFormDLead() {
     },
   });
 }
+
+export type Session = { isOwner: boolean; signInAvailable: boolean; demoResetMinutes: number };
+
+const SESSION_KEY = ["session"];
+
+export function useSession() {
+  return useQuery({
+    queryKey: SESSION_KEY,
+    queryFn: () => request<Session>("/api/auth/session"),
+  });
+}
+
+export function useSignIn() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (password: string) =>
+      request<{ isOwner: boolean }>("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ password }),
+      }),
+    // Signing in swaps demo data for real data, so drop everything cached.
+    onSuccess: () => queryClient.resetQueries(),
+  });
+}
+
+export function useSignOut() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => request<{ isOwner: boolean }>("/api/auth/logout", { method: "POST" }),
+    onSuccess: () => queryClient.resetQueries(),
+  });
+}

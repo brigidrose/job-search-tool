@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+import { getDb } from "@/lib/session";
 
 const COLUMNS = [
   "companyName",
@@ -25,6 +25,7 @@ function csvCell(value: unknown) {
 }
 
 export async function GET() {
+  const { db: prisma } = await getDb();
   const opportunities = await prisma.opportunity.findMany({
     orderBy: { createdAt: "desc" },
   });

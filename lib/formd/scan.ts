@@ -1,4 +1,5 @@
-import { prisma } from "@/lib/db";
+// Scans always write to the owner's data; the demo copies leads from there.
+import { ownerDb as prisma } from "@/lib/db";
 import {
   fetchFormDFiling,
   fetchFormDIndex,

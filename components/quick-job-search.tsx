@@ -53,7 +53,7 @@ export function QuickJobSearch() {
     : [];
 
   return (
-    <section className="grid gap-3">
+    <section className="grid gap-3 *:min-w-0">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="grid gap-1">
           <h2 className="text-lg font-semibold">Quick Job Search</h2>

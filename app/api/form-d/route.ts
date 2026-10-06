@@ -1,13 +1,14 @@
 import type { NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
+import { getDb } from "@/lib/session";
 import { matchLead } from "@/lib/formd/match";
 import { findSearchProfile } from "@/lib/search-profile-server";
 
 // GET /api/form-d             every lead, scored against the search profile
 // GET /api/form-d?profileId=x only leads matching that profile ("default" works)
 export async function GET(request: NextRequest) {
+  const { db: prisma } = await getDb();
   const profileId = request.nextUrl.searchParams.get("profileId");
-  const profile = await findSearchProfile(profileId);
+  const profile = await findSearchProfile(prisma, profileId);
   if (!profile) return Response.json({ error: "Profile not found" }, { status: 404 });
 
   const [rows, lastScan] = await Promise.all([

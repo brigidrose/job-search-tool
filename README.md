@@ -2,17 +2,44 @@
 
 Track job opportunities, outreach status, and personalized outreach templates.
 
-Stack: Next.js 16 (App Router, TypeScript), Tailwind CSS v4, shadcn/ui (Base UI), React Query, Prisma 7 + SQLite.
+Stack: Next.js 16 (App Router, TypeScript), Tailwind CSS v4, shadcn/ui (Base UI), React Query, Prisma 7 + Postgres.
 
-## Setup
+## Setup (local)
 
 ```bash
 npm install          # also runs `prisma generate`
-npm run db:setup     # creates dev.db, applies migrations, seeds starter templates
+cp .env.example .env # then set SEC_USER_AGENT
+npm run db:local     # starts a local Postgres (Prisma dev server) in the background
+npm run db:setup     # creates the tables and seeds starter templates
 npm run dev          # http://localhost:3000
 ```
 
-`.env` holds `DATABASE_URL="file:./dev.db"`. The database file is git-ignored.
+With no `APP_PASSWORD` set, local development skips sign-in and shows your own data.
+
+## Owner and demo
+
+The site has two views of the same app:
+
+- **Owner** (signed in with `APP_PASSWORD`): your real data, everything editable.
+- **Visitors** (not signed in): an interactive demo with sample opportunities and the real, public Form D leads. They can add and edit freely; the demo is rebuilt every 60 minutes and after each daily scan.
+
+The two never mix because they live in separate Postgres schemas: the default schema holds the owner's data and the `demo` schema holds the sample data. Every request handler gets its database from `getDb()` in `lib/session.ts`, which picks one based on the signed-in cookie. A visitor's request has no path to the owner's tables.
+
+Safeguards: sign-in locks for 15 minutes after 10 wrong passwords; the demo caps how many opportunities and research lookups visitors can create; visitors can't start SEC scans; and if `APP_PASSWORD` is missing in production, everyone gets the demo rather than the real data.
+
+## Deploying (Vercel + Postgres)
+
+1. Push this repo to GitHub and import it at vercel.com/new.
+2. In the Vercel project, open **Storage** and add a Postgres database (Prisma Postgres or Neon). This sets `DATABASE_URL` (or `POSTGRES_URL`) for you; it must be a direct `postgres://` URL.
+3. Under **Settings → Environment Variables**, add:
+   - `APP_PASSWORD`: a long, unique password for owner sign-in
+   - `CRON_SECRET`: any long random string
+   - `SEC_USER_AGENT`: `Your Name you@example.com`
+4. Redeploy. The build runs `vercel-build`, which creates the tables in both schemas and then builds the app.
+5. To copy existing local data (the old `dev.db`) into the hosted database, run once from your machine with the hosted connection string:
+   `DATABASE_URL="postgres://..." npm run db:import`
+
+`vercel.json` schedules the Form D scan daily at 13:00 UTC (9am Eastern in summer, 8am in winter). It calls `GET /api/form-d/scan` with the cron secret, scans the last 3 days, then rebuilds the demo.
 
 ## Features
 
@@ -54,7 +81,7 @@ If a source fails, the rest still returns, with the failure noted and manual loo
 
 ## Search profile
 
-One profile, stored in `SearchProfile` (list fields are JSON because SQLite has no array columns). `GET /api/search-profile` returns it, creating defaults on first use; `POST` saves it. "Open to remote" is the single remote setting; "Remote" is not a geography entry.
+One profile, stored in `SearchProfile` (list fields are JSON). `GET /api/search-profile` returns it, creating defaults on first use; `POST` saves it. "Open to remote" is the single remote setting; "Remote" is not a geography entry.
 
 **Form D matching** (`lib/formd/match.ts`): `GET /api/form-d?profileId=default` returns only matching leads; without `profileId` it returns all. Every lead carries `stage`, `location`, `matchScore` (out of 10), `reasonsForMatch`, and `matchesProfile`.
 
@@ -86,9 +113,9 @@ SEC requires a declared User-Agent with contact info, set in `.env`:
 SEC_USER_AGENT="Your Name you@example.com"
 ```
 
-- **Scan now** button on `/form-d` scans the last 7 days.
+- **Scan now** button on `/form-d` scans the last 7 days (owner only).
 - CLI: `npm run formd:scan` (or `-- --days 30` to backfill; about 15 seconds per business day).
-- Scheduled: `GET /api/form-d/scan` with `Authorization: Bearer $CRON_SECRET` (the header Vercel Cron sends).
+- Scheduled: daily on the hosted site (see Deploying).
 
 Scans are idempotent: each EDGAR day is recorded in `FormDScanDay` and skipped afterwards. Today's index isn't published until evening, so a 9am run picks up the previous business day. Requests are throttled to 8/sec, under SEC's 10/sec limit.
 
@@ -107,9 +134,11 @@ Scans are idempotent: each EDGAR day is recorded in `FormDScanDay` and skipped a
 | GET | `/api/form-d` | Form D leads scored against the profile (`?profileId=default` for matches only) |
 | POST | `/api/form-d/scan` | Scan EDGAR (`{ "days": 1-30 }`) |
 | GET | `/api/form-d/scan` | Cron trigger (needs `CRON_SECRET`) |
+| POST | `/api/auth/login`, `/api/auth/logout` | Owner sign in / out |
+| GET | `/api/auth/session` | Whether this browser is the owner or a demo visitor |
 | PATCH | `/api/form-d/[id]` | Set `remoteFriendly` |
 | POST | `/api/form-d/[id]/add` | Add lead to opportunities |
 
 ## Schema changes
 
-Edit `prisma/schema.prisma`, then run `npx prisma migrate dev --name <change>` followed by `npx prisma generate` (Prisma 7 doesn't generate automatically on migrate).
+Edit `prisma/schema.prisma`, then run `npx prisma migrate dev --name <change>`, `npx prisma generate` (Prisma 7 doesn't generate automatically on migrate), and `PRISMA_SCHEMA=demo npx prisma migrate deploy` to bring the demo schema along. The hosted site applies new migrations to both schemas on each deploy.

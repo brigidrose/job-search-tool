@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useFormDLeads, useScanFormD, useSearchProfile } from "@/lib/api";
+import { useFormDLeads, useScanFormD, useSearchProfile, useSession } from "@/lib/api";
 import { summarizeProfile } from "@/lib/search-profile";
 import type { FormDLead } from "@/lib/types";
 
@@ -99,6 +99,7 @@ function FilterSelect<T extends string>({
 
 export default function FormDPage() {
   const scan = useScanFormD();
+  const session = useSession();
   const profile = useSearchProfile();
   const [filters, setFilters] = useState<Filters>({
     scope: "profile",
@@ -134,7 +135,7 @@ export default function FormDPage() {
   }
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-6 *:min-w-0">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="grid gap-1">
           <h1 className="text-2xl font-semibold">Form D Leads</h1>
@@ -145,9 +146,12 @@ export default function FormDPage() {
           </p>
         </div>
         <div className="grid justify-items-end gap-1">
-          <Button onClick={runScan} disabled={scan.isPending}>
-            {scan.isPending ? "Scanning..." : "Scan now"}
-          </Button>
+          {/* Scanning is the owner's action; the demo gets new filings daily. */}
+          {session.data?.isOwner && (
+            <Button onClick={runScan} disabled={scan.isPending}>
+              {scan.isPending ? "Scanning..." : "Scan now"}
+            </Button>
+          )}
           <span className="text-xs text-muted-foreground">
             {data?.lastScannedAt
               ? `Last scan ${new Date(data.lastScannedAt).toLocaleString(undefined, {
