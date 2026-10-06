@@ -19,9 +19,50 @@ npm run dev          # http://localhost:3000
 - **Opportunities** (`/`): add opportunities, change status inline, see totals, leads by status, and outreach-sent %, and export everything as CSV.
 - **Templates** (`/templates`): browse starter outreach templates and preview them with `[Company]`, `[Contact Name]`, `[Role]`, and `[Specific Detail]` filled in, either typed or pulled from an opportunity, then copy the result.
 - **Form D Leads** (`/form-d`, plus a section on the dashboard): companies that recently filed an SEC Form D. See below.
+- **Opportunity detail** (`/opportunities/[id]`, click a company name): fit score with reasons, editable location, and company research. "Write outreach" opens Templates with the opportunity and its research context loaded.
+- **Search Profile** (`/settings`): job titles, industries, geography, company stage, salary, and custom searches. Drives which Form D leads count as matches and the generated Google searches.
+- **Quick Job Search** (dashboard): Google queries generated from the profile, each with Copy and Search (opens Google in a new tab; nothing is searched automatically).
 
 Moving an opportunity to **Applied** stamps `dateApplied` the first time.
 "Outreach sent %" counts leads in Outreach sent, Response received, Interview, Offer, or No response.
+
+## Fit score
+
+`lib/scoring.ts` scores each opportunity 1–10 against the search profile. It starts at 5 and adds:
+
+| Signal | Points |
+| --- | --- |
+| Role contains one of the profile's job titles ("PM", "TPM", and "Sr." are expanded before comparing) | +2 |
+| Came from a Form D lead (funded startup) | +1 |
+| Location matches a profile geography, or is remote when "Open to remote" is on | +1 |
+| Company stage is one the profile targets: a round named in research or notes, else the Form D size estimate (labeled as an estimate) | +1 |
+| Looks like one of the profile's industries (best-effort, from the company name and Form D industry group) | +1 |
+
+Location, stage, and industry use the same matching as Form D leads (`lib/formd/match.ts`). Saving the profile rescales every score.
+
+Badges: **Hot Fit** 8–10 (green), **Warm** 5–7.9 (yellow), **Cold** below 5 (gray). Because the base is 5 and nothing subtracts, Cold can't occur yet. The list can be sorted by score.
+
+## Company research
+
+`POST /api/company/research` with `{ opportunityId }` (result is cached on the opportunity) or `{ companyName, companyDomain? }`. The detail page fetches it automatically the first time an opportunity is viewed. Sources, all best-effort:
+
+- **Funding / stage:** Crunchbase if `CRUNCHBASE_API_KEY` is set in `.env` (untested without a key), else the company's Form D data, else a "<Company> raises $X" headline. A stage estimated from raise size is labeled as an estimate.
+- **Recent news:** Google News RSS (no key). One-word company names can return unrelated headlines; use "Refine news search" on the detail page to set your own search terms.
+- **Hiring:** public Greenhouse, Lever, and Ashby job boards, matched by company name (so confirm it's the right company), plus a LinkedIn jobs link.
+
+If a source fails, the rest still returns, with the failure noted and manual lookup links shown.
+
+## Search profile
+
+One profile, stored in `SearchProfile` (list fields are JSON because SQLite has no array columns). `GET /api/search-profile` returns it, creating defaults on first use; `POST` saves it. "Open to remote" is the single remote setting; "Remote" is not a geography entry.
+
+**Form D matching** (`lib/formd/match.ts`): `GET /api/form-d?profileId=default` returns only matching leads; without `profileId` it returns all. Every lead carries `stage`, `location`, `matchScore` (out of 10), `reasonsForMatch`, and `matchesProfile`.
+
+- **Stage** is estimated from raise size, since filings don't name the round: under $5M Seed, $5M–$20M Series A, $20M+ Series B or later (matches Series B, Series C, or Growth). Filters.
+- **Geography** uses the filing address: presets map to states (and cities for metro areas); custom entries match a city, state name, or state code. Leads you've toggled remote-friendly match when "Open to remote" is on. International presets match any non-US, non-Canadian company, because the stored data doesn't say which country. Filters.
+- **Industry** is a guess from the company name and the filing's coarse industry group. It raises the score but never hides a lead.
+
+**Generated searches** (`lib/dorks.ts`, `GET /api/search-profile/generated-dorks`): Greenhouse, Lever, Workable, other hiring platforms (Ashby, SmartRecruiters, BambooHR, iCIMS, Taleo), company career pages (`inurl:careers` / `inurl:jobs`, minus the big aggregators), niche boards (Wellfound, We Work Remotely, Work at a Startup, Hacker News), one per geography, plus your custom searches. Up to six job titles go in each query to stay under Google's query length limit.
 
 ## Form D leads
 
@@ -35,7 +76,7 @@ Each company (CIK) is stored once in `FormDLead`. "Add" creates an Opportunity w
 
 **Contacts are guesses.** Form D lists principals' names but no emails or websites. The scanner guesses a domain from the company name (`name.com` / `.ai` / `.io`, first one with a mail server) and suggests `careers@` / `hiring@`. Verify before reaching out.
 
-**Remote-friendly** is a toggle you set per lead; Form D doesn't include it. **Southeast** = AL, AR, FL, GA, KY, LA, MS, NC, SC, TN, VA, WV (issuer's address).
+**Remote-friendly** is a toggle you set per lead; Form D doesn't include it. Which locations count as a match comes from the search profile.
 
 ### Running scans
 
@@ -56,10 +97,14 @@ Scans are idempotent: each EDGAR day is recorded in `FormDScanDay` and skipped a
 | Method | Route | Purpose |
 | --- | --- | --- |
 | GET / POST | `/api/opportunities` | List / create |
-| PATCH | `/api/opportunities/[id]` | Update status |
+| GET / PATCH | `/api/opportunities/[id]` | Read / update status, location, news search |
+| GET | `/api/opportunities/[id]/score` | Fit score `{ score, reasoning, badge }` |
+| POST | `/api/company/research` | Company research |
 | GET | `/api/opportunities/export` | CSV download |
 | GET | `/api/templates` | List templates |
-| GET | `/api/form-d` | Form D leads + last scan time |
+| GET / POST | `/api/search-profile` | Read / save the search profile |
+| GET | `/api/search-profile/generated-dorks` | Google searches generated from the profile |
+| GET | `/api/form-d` | Form D leads scored against the profile (`?profileId=default` for matches only) |
 | POST | `/api/form-d/scan` | Scan EDGAR (`{ "days": 1-30 }`) |
 | GET | `/api/form-d/scan` | Cron trigger (needs `CRON_SECRET`) |
 | PATCH | `/api/form-d/[id]` | Set `remoteFriendly` |

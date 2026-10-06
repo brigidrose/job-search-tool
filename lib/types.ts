@@ -48,12 +48,78 @@ export type Opportunity = {
   contactName: string | null;
   contactEmail: string | null;
   source: string | null;
+  location: string | null;
   dateFound: string;
   dateApplied: string | null;
   status: Status;
   notes: string | null;
   createdAt: string;
   updatedAt: string;
+  newsQuery: string | null;
+  research: CompanyResearch | null;
+  researchFetchedAt: string | null;
+  formDLead: LinkedFormDLead | null;
+  fit: FitScore;
+};
+
+// The Form D fields that matter once a lead has become an opportunity.
+export type LinkedFormDLead = Pick<
+  FormDLead,
+  | "cik"
+  | "accessionNumber"
+  | "city"
+  | "state"
+  | "industry"
+  | "totalOfferingAmount"
+  | "totalAmountSold"
+  | "dateOfFirstSale"
+  | "dateFiled"
+  | "guessedDomain"
+  | "isSoutheast"
+  | "remoteFriendly"
+>;
+
+export type FitBadge = "hot" | "warm" | "cold";
+
+export type FitScore = { score: number; reasoning: string[]; badge: FitBadge };
+
+export const FIT_LABELS: Record<FitBadge, string> = {
+  hot: "Hot Fit",
+  warm: "Warm",
+  cold: "Cold",
+};
+
+export type NewsItem = {
+  title: string;
+  url: string;
+  source: string | null;
+  date: string | null;
+};
+
+export type CompanyResearch = {
+  companyName: string;
+  funding: {
+    summary: string;
+    amount: number | null;
+    date: string | null;
+    round: string | null;
+    investors: string[];
+    source: "form_d" | "crunchbase" | "news";
+    url: string | null;
+  } | null;
+  stage: { label: string; basis: string } | null;
+  hiring_signals: {
+    openPositions: number;
+    relevantRoles: string[];
+    provider: string;
+    boardUrl: string;
+  } | null;
+  recent_news: NewsItem[];
+  // Manual lookups, always present so a failed fetch never blocks the workflow.
+  links: { linkedinJobs: string; google: string; googleNews: string; crunchbase: string };
+  // Human-readable notes on sources that failed or were skipped.
+  errors: string[];
+  fetchedAt: string;
 };
 
 export type NewOpportunity = {
@@ -63,6 +129,7 @@ export type NewOpportunity = {
   contactName?: string;
   contactEmail?: string;
   source?: string;
+  location?: string;
   notes?: string;
 };
 
@@ -96,6 +163,12 @@ export type FormDLead = {
   remoteFriendly: boolean;
   opportunityId: string | null;
   createdAt: string;
+  // How the lead compares to the search profile (see lib/formd/match.ts).
+  stage: string | null;
+  location: string | null;
+  matchScore: number;
+  reasonsForMatch: string[];
+  matchesProfile: boolean;
 };
 
 export type FormDScanResult = {

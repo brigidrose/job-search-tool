@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { FormDTable } from "@/components/form-d-table";
@@ -12,16 +13,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useFormDLeads, useScanFormD } from "@/lib/api";
+import { useFormDLeads, useScanFormD, useSearchProfile } from "@/lib/api";
+import { summarizeProfile } from "@/lib/search-profile";
 import type { FormDLead } from "@/lib/types";
 
 type Option<T extends string> = { value: T; label: string };
 
-const GEOGRAPHY = [
-  { value: "all", label: "Anywhere" },
-  { value: "southeast", label: "Southeast" },
-  { value: "remote", label: "Remote-friendly" },
-  { value: "either", label: "Southeast or remote" },
+const SCOPE = [
+  { value: "profile", label: "Matching my profile" },
+  { value: "all", label: "All leads" },
 ] as const satisfies Option<string>[];
 
 const AMOUNT = [
@@ -45,17 +45,13 @@ const STATUS = [
 ] as const satisfies Option<string>[];
 
 type Filters = {
-  geography: (typeof GEOGRAPHY)[number]["value"];
+  scope: (typeof SCOPE)[number]["value"];
   amount: (typeof AMOUNT)[number]["value"];
   filed: (typeof FILED)[number]["value"];
   status: (typeof STATUS)[number]["value"];
 };
 
 function matches(lead: FormDLead, f: Filters) {
-  if (f.geography === "southeast" && !lead.isSoutheast) return false;
-  if (f.geography === "remote" && !lead.remoteFriendly) return false;
-  if (f.geography === "either" && !lead.isSoutheast && !lead.remoteFriendly) return false;
-
   if (f.amount !== "all") {
     const [min, max] = f.amount.split("-").map((n) => Number(n) * 1_000_000);
     const raise = lead.totalOfferingAmount ?? lead.totalAmountSold ?? 0;
@@ -102,10 +98,10 @@ function FilterSelect<T extends string>({
 }
 
 export default function FormDPage() {
-  const { data, isPending, error } = useFormDLeads();
   const scan = useScanFormD();
+  const profile = useSearchProfile();
   const [filters, setFilters] = useState<Filters>({
-    geography: "all",
+    scope: "profile",
     amount: "all",
     filed: "all",
     status: "open",
@@ -114,7 +110,13 @@ export default function FormDPage() {
   const set = <K extends keyof Filters>(key: K) => (value: Filters[K]) =>
     setFilters((f) => ({ ...f, [key]: value }));
 
-  const leads = data?.leads.filter((l) => matches(l, filters)) ?? [];
+  const profileOnly = filters.scope === "profile";
+  const { data, isPending, error } = useFormDLeads(profileOnly);
+
+  const leads = (data?.leads ?? [])
+    .filter((l) => matches(l, filters))
+    // Best matches first; the API's newest-first order breaks ties.
+    .sort((a, b) => b.matchScore - a.matchScore);
 
   function runScan() {
     const toastId = toast.loading("Scanning SEC EDGAR for new Form D filings...");
@@ -158,7 +160,7 @@ export default function FormDPage() {
       </div>
 
       <div className="flex flex-wrap gap-4">
-        <FilterSelect label="Geography" options={GEOGRAPHY} value={filters.geography} onChange={set("geography")} />
+        <FilterSelect label="Leads" options={SCOPE} value={filters.scope} onChange={set("scope")} />
         <FilterSelect label="Raise" options={AMOUNT} value={filters.amount} onChange={set("amount")} />
         <FilterSelect label="Filed" options={FILED} value={filters.filed} onChange={set("filed")} />
         <FilterSelect label="Show" options={STATUS} value={filters.status} onChange={set("status")} />
@@ -171,7 +173,12 @@ export default function FormDPage() {
       ) : (
         <>
           <p className="text-sm text-muted-foreground">
-            Showing {leads.length} of {data.leads.length} leads
+            {profileOnly && profile.data
+              ? `Showing ${leads.length} Form D leads matching your profile (${summarizeProfile(profile.data)}), out of ${data.total} total. `
+              : `Showing ${leads.length} of ${data.total} leads. `}
+            <Link href="/settings" className="underline underline-offset-4">
+              Edit search profile
+            </Link>
           </p>
           <FormDTable leads={leads} />
         </>

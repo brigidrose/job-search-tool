@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/", label: "Opportunities" },
   { href: "/form-d", label: "Form D Leads" },
   { href: "/templates", label: "Templates" },
+  { href: "/settings", label: "Search Profile" },
 ];
 
 export function SiteNav() {

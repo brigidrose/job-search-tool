@@ -7,6 +7,7 @@ const COLUMNS = [
   "contactName",
   "contactEmail",
   "source",
+  "location",
   "status",
   "dateFound",
   "dateApplied",

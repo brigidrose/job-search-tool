@@ -1,16 +1,14 @@
 import { prisma } from "@/lib/db";
+import { opportunityInclude, optionalString, withFit } from "@/lib/opportunities";
+import { getSearchProfile } from "@/lib/search-profile-server";
 
 export async function GET() {
   const opportunities = await prisma.opportunity.findMany({
     orderBy: { createdAt: "desc" },
+    include: opportunityInclude,
   });
-  return Response.json(opportunities);
-}
-
-function optionalString(value: unknown) {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed === "" ? null : trimmed;
+  const profile = await getSearchProfile();
+  return Response.json(opportunities.map((o) => withFit(o, profile)));
 }
 
 export async function POST(request: Request) {
@@ -49,8 +47,10 @@ export async function POST(request: Request) {
       contactName: optionalString(body.contactName),
       contactEmail,
       source: optionalString(body.source),
+      location: optionalString(body.location),
       notes: optionalString(body.notes),
     },
+    include: opportunityInclude,
   });
-  return Response.json(opportunity, { status: 201 });
+  return Response.json(withFit(opportunity, await getSearchProfile()), { status: 201 });
 }

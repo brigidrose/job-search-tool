@@ -6,21 +6,24 @@ import { useFormDLeads } from "@/lib/api";
 
 const SHOWN = 5;
 
-// Dashboard section: the newest Form D leads not yet added as opportunities.
+// Dashboard section: Form D leads that fit the search profile and haven't been
+// added as opportunities yet, best matches first.
 export function FormDSummary() {
-  const { data, isPending, error } = useFormDLeads();
+  const { data, isPending, error } = useFormDLeads(true);
   if (isPending || error) return null;
 
-  const open = data.leads.filter((l) => !l.opportunityId);
+  const open = data.leads
+    .filter((l) => !l.opportunityId)
+    .sort((a, b) => b.matchScore - a.matchScore);
   const newCount = open.filter(isNewLead).length;
 
   return (
     <section className="grid gap-3">
       <div className="flex items-baseline justify-between gap-4">
         <h2 className="text-lg font-semibold">
-          New Form D leads{" "}
+          Form D leads matching your profile{" "}
           <span className="text-sm font-normal text-muted-foreground">
-            {newCount} new in the last 2 days · {open.length} not yet added
+            {open.length} to review · {newCount} new in the last 2 days
           </span>
         </h2>
         <Link href="/form-d" className="text-sm underline-offset-4 hover:underline">

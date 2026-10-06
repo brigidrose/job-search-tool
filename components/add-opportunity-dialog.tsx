@@ -30,6 +30,7 @@ const FIELDS: {
   { name: "contactName", label: "Contact name" },
   { name: "contactEmail", label: "Contact email", type: "email" },
   { name: "source", label: "Source", placeholder: "LinkedIn, referral, ..." },
+  { name: "location", label: "Location", placeholder: "Remote, Charlotte, NC, ..." },
 ];
 
 export function AddOpportunityDialog() {

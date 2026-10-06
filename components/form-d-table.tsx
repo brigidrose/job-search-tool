@@ -32,13 +32,6 @@ function formatMoney(n: number | null) {
   return `$${n}`;
 }
 
-// Form D uses two-letter codes for US states and letter+digit codes abroad.
-function location(lead: FormDLead) {
-  if (!lead.state) return lead.city;
-  const state = /^[A-Z]{2}$/.test(lead.state) ? lead.state : "Non-US";
-  return [lead.city, state].filter(Boolean).join(", ");
-}
-
 export function isNewLead(lead: FormDLead) {
   return Date.now() - new Date(lead.createdAt).getTime() < 2 * 86_400_000;
 }
@@ -141,6 +134,7 @@ export function FormDTable({
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>Match</TableHead>
             <TableHead>Company</TableHead>
             <TableHead>Raise</TableHead>
             <TableHead>Principals</TableHead>
@@ -153,6 +147,15 @@ export function FormDTable({
         <TableBody>
           {leads.map((lead) => (
             <TableRow key={lead.id} className="align-top">
+              <TableCell>
+                <span
+                  className="font-medium tabular-nums"
+                  title="How well this lead fits your search profile, out of 10"
+                >
+                  {lead.matchScore}
+                  <span className="text-xs font-normal text-muted-foreground">/10</span>
+                </span>
+              </TableCell>
               <TableCell className="max-w-64 whitespace-normal">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <a
@@ -165,18 +168,25 @@ export function FormDTable({
                     {lead.companyName}
                   </a>
                   {isNewLead(lead) && <Badge>New</Badge>}
-                  {lead.isSoutheast && <Badge variant="secondary">Southeast</Badge>}
                   {lead.remoteFriendly && <Badge variant="secondary">Remote</Badge>}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {[location(lead), lead.industry].filter(Boolean).join(" · ")}
+                  {[lead.location, lead.industry].filter(Boolean).join(" · ")}
                 </div>
+                {lead.reasonsForMatch.length > 0 && (
+                  <div className="mt-1 text-xs text-green-700 dark:text-green-400">
+                    {lead.reasonsForMatch.join(" · ")}
+                  </div>
+                )}
               </TableCell>
               <TableCell className="tabular-nums">
                 <div>{formatMoney(lead.totalOfferingAmount ?? lead.totalAmountSold)}</div>
                 <div className="text-xs text-muted-foreground">
                   {formatMoney(lead.totalAmountSold)} sold
                 </div>
+                {lead.stage && (
+                  <div className="text-xs text-muted-foreground">{lead.stage}</div>
+                )}
               </TableCell>
               <TableCell className="whitespace-normal">
                 <Principals lead={lead} max={compact ? 2 : 3} />

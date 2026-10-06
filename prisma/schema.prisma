@@ -26,12 +26,19 @@ model Opportunity {
   contactName  String?
   contactEmail String?
   source       String?
+  // Free text, e.g. "Remote" or "Charlotte, NC"; used for fit scoring.
+  location     String?
   dateFound    DateTime          @default(now())
   dateApplied  DateTime?
   status       OpportunityStatus @default(found)
   notes        String?
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
+  // Cached result of the last company research fetch (see lib/research).
+  // Optional override for the news search when the company name is ambiguous.
+  newsQuery         String?
+  research          Json?
+  researchFetchedAt DateTime?
   formDLead    FormDLead?
 }
 
@@ -76,4 +83,22 @@ model FormDScanDay {
   filingsSeen   Int
   leadsAdded    Int
   scannedAt     DateTime @default(now())
+}
+
+// What "relevant" means for the user. One row per user (single-user for now).
+// List fields are JSON string arrays because SQLite has no array columns.
+model SearchProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique @default("default")
+  name          String   @default("My Search Profile")
+  jobTitles     Json
+  industries    Json
+  geographies   Json
+  allowRemote   Boolean  @default(true)
+  companyStages Json
+  minSalary     Int?
+  maxSalary     Int?
+  customDorks   Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }

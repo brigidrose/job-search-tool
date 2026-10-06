@@ -1,7 +1,11 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { GeneratedDorks } from "@/lib/dorks";
+import type { SearchProfile, SearchProfileInput } from "@/lib/search-profile";
 import type {
+  CompanyResearch,
+  FitScore,
   FormDLead,
   FormDScanResult,
   NewOpportunity,
@@ -26,6 +30,45 @@ export function useOpportunities() {
   return useQuery({
     queryKey: OPPORTUNITIES_KEY,
     queryFn: () => request<Opportunity[]>("/api/opportunities"),
+  });
+}
+
+export function useOpportunity(id: string) {
+  return useQuery({
+    queryKey: [...OPPORTUNITIES_KEY, id],
+    queryFn: () => request<Opportunity>(`/api/opportunities/${id}`),
+  });
+}
+
+export function useFitScore(id: string) {
+  return useQuery({
+    queryKey: [...OPPORTUNITIES_KEY, id, "score"],
+    queryFn: () => request<FitScore>(`/api/opportunities/${id}/score`),
+  });
+}
+
+export function useUpdateOpportunity(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (fields: { location?: string | null; newsQuery?: string | null }) =>
+      request<Opportunity>(`/api/opportunities/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(fields),
+      }),
+    // Prefix match also refreshes this opportunity's detail and score queries.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: OPPORTUNITIES_KEY }),
+  });
+}
+
+export function useResearchOpportunity(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      request<{ research: CompanyResearch; opportunity: Opportunity }>(
+        "/api/company/research",
+        { method: "POST", body: JSON.stringify({ opportunityId: id }) },
+      ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: OPPORTUNITIES_KEY }),
   });
 }
 
@@ -74,11 +117,47 @@ export function useUpdateStatus() {
 
 const FORM_D_KEY = ["form-d"];
 
-export function useFormDLeads() {
+/** All leads, or with `matchingProfile` only those that fit the search profile. */
+export function useFormDLeads(matchingProfile = false) {
   return useQuery({
-    queryKey: FORM_D_KEY,
+    queryKey: [...FORM_D_KEY, matchingProfile ? "matching" : "all"],
     queryFn: () =>
-      request<{ leads: FormDLead[]; lastScannedAt: string | null }>("/api/form-d"),
+      request<{ leads: FormDLead[]; total: number; lastScannedAt: string | null }>(
+        matchingProfile ? "/api/form-d?profileId=default" : "/api/form-d",
+      ),
+  });
+}
+
+const PROFILE_KEY = ["search-profile"];
+
+export function useSearchProfile() {
+  return useQuery({
+    queryKey: PROFILE_KEY,
+    queryFn: () => request<SearchProfile>("/api/search-profile"),
+  });
+}
+
+export function useGeneratedDorks() {
+  return useQuery({
+    queryKey: [...PROFILE_KEY, "dorks"],
+    queryFn: () => request<GeneratedDorks>("/api/search-profile/generated-dorks"),
+  });
+}
+
+export function useSaveSearchProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SearchProfileInput) =>
+      request<SearchProfile>("/api/search-profile", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    // The profile drives the generated searches, Form D matches, and fit scores.
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: PROFILE_KEY });
+      queryClient.invalidateQueries({ queryKey: FORM_D_KEY });
+      queryClient.invalidateQueries({ queryKey: OPPORTUNITIES_KEY });
+    },
   });
 }
 

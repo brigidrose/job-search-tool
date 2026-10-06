@@ -4,6 +4,7 @@ import { AddOpportunityDialog } from "@/components/add-opportunity-dialog";
 import { DashboardStats } from "@/components/dashboard-stats";
 import { FormDSummary } from "@/components/form-d-summary";
 import { OpportunitiesTable } from "@/components/opportunities-table";
+import { QuickJobSearch } from "@/components/quick-job-search";
 import { Button } from "@/components/ui/button";
 import { useOpportunities } from "@/lib/api";
 
@@ -35,6 +36,7 @@ export default function HomePage() {
           <DashboardStats opportunities={opportunities} />
           <FormDSummary />
           <OpportunitiesTable opportunities={opportunities} />
+          <QuickJobSearch />
         </>
       )}
     </div>

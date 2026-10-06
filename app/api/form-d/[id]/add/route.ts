@@ -57,6 +57,7 @@ export async function POST(_request: NextRequest, ctx: RouteContext<"/api/form-d
             roleTitle: "TBD (Form D lead)",
             contactName: executive?.name || null,
             source: "form_d",
+            location: [lead.city, lead.state].filter(Boolean).join(", ") || null,
             notes,
           },
         });
