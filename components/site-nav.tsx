@@ -22,7 +22,8 @@ export function SiteNav() {
         <div className="bg-amber-100 px-4 py-2 text-center text-sm text-amber-950 dark:bg-amber-900/40 dark:text-amber-100">
           <strong>Demo.</strong> The opportunities here are sample data, so try anything:
           add, edit, score, research. Changes reset every {session.demoResetMinutes} minutes.
-          Form D leads are real SEC filings.
+          Form D leads are real SEC filings. This is a work in progress, with new features and
+          improvements added regularly.
         </div>
       )}
       <nav className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
